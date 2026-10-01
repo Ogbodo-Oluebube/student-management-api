@@ -132,3 +132,32 @@ export const updateStudent = async (req, res, next) => {
         next(error);
     }
 };
+
+// Delete a student by ID
+export const deleteStudent = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `DELETE FROM students
+             WHERE student_id = $1
+             RETURNING *`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Student deleted successfully',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        next(error);
+    }
+};
