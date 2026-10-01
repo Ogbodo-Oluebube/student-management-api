@@ -1,151 +1,94 @@
-import pool from '../config/database.js';
+import {
+  getAllStudents,
+  getStudentById,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+} from '../services/student.service.js';
 
 // Get all students
 export const getStudents = async (req, res, next) => {
-    try {
-        const result = await pool.query(
-            'SELECT * FROM students ORDER BY student_id'
-        );
+  try {
+    const students = await getAllStudents();
 
-        res.status(200).json({
-            success: true,
-            count: result.rows.length,
-            data: result.rows
-        });
-    } catch (error) {
-        next(error);
-    }
+    res.status(200).json({
+      success: true,
+      count: students.length,
+      data: students,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Get a single student by ID
-export const getStudentById = async (req, res, next) => {
-    try {
-        const { id } = req.params;
+export const getStudentByIdController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-        const result = await pool.query(
-            'SELECT * FROM students WHERE student_id = $1',
-            [id]
-        );
+    const student = await getStudentById(id);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Student not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: result.rows[0]
-        });
-    } catch (error) {
-        next(error);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found',
+      });
     }
+
+    res.status(200).json({
+      success: true,
+      data: student,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Create a new student
-export const createStudent = async (req, res, next) => {
-    try {
-        const {
-            reg_no,
-            student_name,
-            email,
-            phone,
-            department_id,
-            date_of_birth,
-            status
-        } = req.body;
+export const createStudentController = async (req, res, next) => {
+  try {
+    const newStudent = await createStudent(req.body);
 
-        const result = await pool.query(
-            `INSERT INTO students
-            (reg_no, student_name, email, phone, department_id, date_of_birth, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING *`,
-            [
-                reg_no,
-                student_name,
-                email,
-                phone,
-                department_id,
-                date_of_birth,
-                status
-            ]
-        );
-
-        res.status(201).json(result.rows[0]);
-    } catch (error) {
-        next(error);
-    }
+    res.status(201).json({
+      success: true,
+      data: newStudent,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Update a student by ID
-export const updateStudent = async (req, res, next) => {
-    try {
-        const { id } = req.params;
+export const updateStudentController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-        const {
-            reg_no,
-            student_name,
-            email,
-            phone,
-            department_id,
-            date_of_birth,
-            status
-        } = req.body;
+    const updatedStudent = await updateStudent(id, req.body);
 
-        const result = await pool.query(
-            `UPDATE students
-             SET
-                reg_no = COALESCE($1, reg_no),
-                student_name = COALESCE($2, student_name),
-                email = COALESCE($3, email),
-                phone = COALESCE($4, phone),
-                department_id = COALESCE($5, department_id),
-                date_of_birth = COALESCE($6, date_of_birth),
-                status = COALESCE($7, status)
-             WHERE student_id = $8
-             RETURNING *`,
-            [
-                reg_no,
-                student_name,
-                email,
-                phone,
-                department_id,
-                date_of_birth,
-                status,
-                id
-            ]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Student not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: result.rows[0]
-        });
-    } catch (error) {
-        next(error);
+    if (!updatedStudent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found',
+      });
     }
+
+    res.status(200).json({
+      success: true,
+      data: updatedStudent,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // Delete a student by ID
-export const deleteStudent = async (req, res, next) => {
+export const deleteStudentController = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const result = await pool.query(
-            `DELETE FROM students
-             WHERE student_id = $1
-             RETURNING *`,
-            [id]
-        );
+        const deletedStudent = await deleteStudent(id);
 
-        if (result.rows.length === 0) {
+        if (!deletedStudent) {
             return res.status(404).json({
                 success: false,
                 message: 'Student not found'
@@ -155,7 +98,7 @@ export const deleteStudent = async (req, res, next) => {
         res.status(200).json({
             success: true,
             message: 'Student deleted successfully',
-            data: result.rows[0]
+            data: deletedStudent
         });
     } catch (error) {
         next(error);
