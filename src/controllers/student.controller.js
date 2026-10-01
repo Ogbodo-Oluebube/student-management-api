@@ -77,3 +77,58 @@ export const createStudent = async (req, res, next) => {
         next(error);
     }
 };
+
+// Update a student by ID
+export const updateStudent = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            reg_no,
+            student_name,
+            email,
+            phone,
+            department_id,
+            date_of_birth,
+            status
+        } = req.body;
+
+        const result = await pool.query(
+            `UPDATE students
+             SET
+                reg_no = COALESCE($1, reg_no),
+                student_name = COALESCE($2, student_name),
+                email = COALESCE($3, email),
+                phone = COALESCE($4, phone),
+                department_id = COALESCE($5, department_id),
+                date_of_birth = COALESCE($6, date_of_birth),
+                status = COALESCE($7, status)
+             WHERE student_id = $8
+             RETURNING *`,
+            [
+                reg_no,
+                student_name,
+                email,
+                phone,
+                department_id,
+                date_of_birth,
+                status,
+                id
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: result.rows[0]
+        });
+    } catch (error) {
+        next(error);
+    }
+};
