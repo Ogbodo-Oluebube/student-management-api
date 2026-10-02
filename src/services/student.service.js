@@ -40,25 +40,34 @@ export const getStudentById = async (id) => {
 
 // Create a new student
 export const createStudent = async (studentData) => {
-  const {
-    reg_no,
-    student_name,
-    email,
-    phone,
-    department_id,
-    date_of_birth,
-    status,
-  } = studentData;
-  
-  const result = await pool.query(
-    `INSERT INTO students
-        (reg_no, student_name, email, phone, department_id, date_of_birth, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *`,
-    [reg_no, student_name, email, phone, department_id, date_of_birth, status],
-  );
+    const {
+        reg_no,
+        student_name,
+        email,
+        phone,
+        department_id,
+        date_of_birth
+    } = studentData;
 
-  return result.rows[0];
+    const status = studentData.status ?? 'Active';
+
+    const result = await pool.query(
+        `INSERT INTO students
+            (reg_no, student_name, email, phone, department_id, date_of_birth, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [
+            reg_no,
+            student_name,
+            email,
+            phone ?? null,
+            department_id,
+            date_of_birth ?? null,
+            status
+        ]
+    );
+
+    return result.rows[0];
 };
 
 // Update a student by ID
