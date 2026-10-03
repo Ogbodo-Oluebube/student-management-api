@@ -95,8 +95,8 @@ export const getAllStudents = async (
 
 // Get a single student by ID
 export const getStudentById = async (id) => {
-    const result = await pool.query(
-        `SELECT
+  const result = await pool.query(
+    `SELECT
             students.student_id,
             students.reg_no,
             students.student_name,
@@ -110,10 +110,10 @@ export const getStudentById = async (id) => {
          JOIN departments
             ON students.department_id = departments.department_id
          WHERE students.student_id = $1`,
-        [id]
-    );
+    [id],
+  );
 
-    return result.rows[0];
+  return result.rows[0];
 };
 
 // Create a new student
@@ -125,9 +125,9 @@ export const createStudent = async (studentData) => {
 
   const result = await pool.query(
     `INSERT INTO students
-            (reg_no, student_name, email, phone, department_id, date_of_birth, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING *`,
+      (reg_no, student_name, email, phone, department_id, date_of_birth, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING student_id`,
     [
       reg_no,
       student_name,
@@ -139,7 +139,27 @@ export const createStudent = async (studentData) => {
     ],
   );
 
-  return result.rows[0];
+  const studentId = result.rows[0].student_id;
+
+  const studentResult = await pool.query(
+    `SELECT
+        students.student_id,
+        students.reg_no,
+        students.student_name,
+        students.email,
+        students.phone,
+        students.department_id,
+        departments.department_name,
+        students.date_of_birth,
+        students.status
+     FROM students
+     JOIN departments
+        ON students.department_id = departments.department_id
+     WHERE students.student_id = $1`,
+    [studentId],
+  );
+
+  return studentResult.rows[0];
 };
 
 // Update a student by ID
@@ -156,16 +176,16 @@ export const updateStudent = async (id, studentData) => {
 
   const result = await pool.query(
     `UPDATE students
-         SET
-            reg_no = COALESCE($1, reg_no),
-            student_name = COALESCE($2, student_name),
-            email = COALESCE($3, email),
-            phone = COALESCE($4, phone),
-            department_id = COALESCE($5, department_id),
-            date_of_birth = COALESCE($6, date_of_birth),
-            status = COALESCE($7, status)
-         WHERE student_id = $8
-         RETURNING *`,
+     SET
+        reg_no = COALESCE($1, reg_no),
+        student_name = COALESCE($2, student_name),
+        email = COALESCE($3, email),
+        phone = COALESCE($4, phone),
+        department_id = COALESCE($5, department_id),
+        date_of_birth = COALESCE($6, date_of_birth),
+        status = COALESCE($7, status)
+     WHERE student_id = $8
+     RETURNING student_id`,
     [
       reg_no,
       student_name,
@@ -178,7 +198,31 @@ export const updateStudent = async (id, studentData) => {
     ],
   );
 
-  return result.rows[0];
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const studentId = result.rows[0].student_id;
+
+  const studentResult = await pool.query(
+    `SELECT
+        students.student_id,
+        students.reg_no,
+        students.student_name,
+        students.email,
+        students.phone,
+        students.department_id,
+        departments.department_name,
+        students.date_of_birth,
+        students.status
+     FROM students
+     JOIN departments
+        ON students.department_id = departments.department_id
+     WHERE students.student_id = $1`,
+    [studentId],
+  );
+
+  return studentResult.rows[0];
 };
 
 // Delete a student by ID
