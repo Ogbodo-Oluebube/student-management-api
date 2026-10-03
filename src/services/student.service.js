@@ -227,13 +227,56 @@ export const updateStudent = async (id, studentData) => {
 
 // Delete a student by ID
 export const deleteStudent = async (id) => {
-  const result = await pool.query(
-    `
-        DELETE FROM students
-        WHERE student_id = $1
-        RETURNING *`,
-    [id],
-  );
+  const client = await pool.connect();
 
-  return result.rows[0];
+  try {
+    await client.query('BEGIN');
+
+    // Get the student before deleting it
+    const studentResult = await client.query(
+      `SELECT
+          students.student_id,
+          students.reg_no,
+          students.student_name,
+          students.email,
+          students.phone,
+          students.department_id,
+          departments.department_name,
+          students.date_of_birth,
+          students.status
+       FROM students
+       JOIN departments
+          ON students.department_id = departments.department_id
+       WHERE students.student_id = $1`,
+      [id],
+    );
+
+    // Student doesn't exist
+    if (studentResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const deletedStudent = studentResult.rows[0];
+
+    // Delete the student
+    await client.query(
+      `DELETE FROM students
+       WHERE student_id = $1`,
+      [id],
+    );
+
+    // Permanently apply the transaction
+    await client.query('COMMIT');
+
+    return deletedStudent;
+  } catch (error) {
+    // Undo any changes if something goes wrong
+    await client.query('ROLLBACK');
+
+    throw error;
+  } finally {
+    // Return the connection to the pool
+    client.release();
+  }
 };
