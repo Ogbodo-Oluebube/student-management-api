@@ -1,5 +1,27 @@
 import pool from '../config/database.js';
 
+const getStudentWithDepartment = async (id, client = pool) => {
+  const result = await client.query(
+    `SELECT
+        students.student_id,
+        students.reg_no,
+        students.student_name,
+        students.email,
+        students.phone,
+        students.department_id,
+        departments.department_name,
+        students.date_of_birth,
+        students.status
+     FROM students
+     JOIN departments
+        ON students.department_id = departments.department_id
+     WHERE students.student_id = $1`,
+    [id],
+  );
+
+  return result.rows[0];
+};
+
 export const getAllStudents = async (
   status,
   department_id,
@@ -94,26 +116,8 @@ export const getAllStudents = async (
 };
 
 // Get a single student by ID
-export const getStudentById = async (id) => {
-  const result = await pool.query(
-    `SELECT
-            students.student_id,
-            students.reg_no,
-            students.student_name,
-            students.email,
-            students.phone,
-            students.department_id,
-            departments.department_name,
-            students.date_of_birth,
-            students.status
-         FROM students
-         JOIN departments
-            ON students.department_id = departments.department_id
-         WHERE students.student_id = $1`,
-    [id],
-  );
-
-  return result.rows[0];
+export const getStudentById = (id) => {
+  return getStudentWithDepartment(id);
 };
 
 // Create a new student
@@ -141,25 +145,7 @@ export const createStudent = async (studentData) => {
 
   const studentId = result.rows[0].student_id;
 
-  const studentResult = await pool.query(
-    `SELECT
-        students.student_id,
-        students.reg_no,
-        students.student_name,
-        students.email,
-        students.phone,
-        students.department_id,
-        departments.department_name,
-        students.date_of_birth,
-        students.status
-     FROM students
-     JOIN departments
-        ON students.department_id = departments.department_id
-     WHERE students.student_id = $1`,
-    [studentId],
-  );
-
-  return studentResult.rows[0];
+  return getStudentWithDepartment(studentId);
 };
 
 // Update a student by ID
@@ -204,25 +190,7 @@ export const updateStudent = async (id, studentData) => {
 
   const studentId = result.rows[0].student_id;
 
-  const studentResult = await pool.query(
-    `SELECT
-        students.student_id,
-        students.reg_no,
-        students.student_name,
-        students.email,
-        students.phone,
-        students.department_id,
-        departments.department_name,
-        students.date_of_birth,
-        students.status
-     FROM students
-     JOIN departments
-        ON students.department_id = departments.department_id
-     WHERE students.student_id = $1`,
-    [studentId],
-  );
-
-  return studentResult.rows[0];
+  return getStudentWithDepartment(studentId);
 };
 
 // Delete a student by ID
@@ -232,51 +200,26 @@ export const deleteStudent = async (id) => {
   try {
     await client.query('BEGIN');
 
-    // Get the student before deleting it
-    const studentResult = await client.query(
-      `SELECT
-          students.student_id,
-          students.reg_no,
-          students.student_name,
-          students.email,
-          students.phone,
-          students.department_id,
-          departments.department_name,
-          students.date_of_birth,
-          students.status
-       FROM students
-       JOIN departments
-          ON students.department_id = departments.department_id
-       WHERE students.student_id = $1`,
-      [id],
-    );
+    const deletedStudent = await getStudentWithDepartment(id, client);
 
-    // Student doesn't exist
-    if (studentResult.rows.length === 0) {
+    if (!deletedStudent) {
       await client.query('ROLLBACK');
       return null;
     }
 
-    const deletedStudent = studentResult.rows[0];
-
-    // Delete the student
     await client.query(
       `DELETE FROM students
        WHERE student_id = $1`,
       [id],
     );
 
-    // Permanently apply the transaction
     await client.query('COMMIT');
 
     return deletedStudent;
   } catch (error) {
-    // Undo any changes if something goes wrong
     await client.query('ROLLBACK');
-
     throw error;
   } finally {
-    // Return the connection to the pool
     client.release();
   }
 };
